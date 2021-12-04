@@ -1,0 +1,106 @@
+@startuml design
+
+package spellcheck{
+  interface Checker{
+    bool check(string)
+  }
+  entity TheChecker
+  TheChecker --|> Checker
+  class DictChecker{
+    - dict
+    + bool check(string)
+  }
+  Checker <|-- DictChecker
+  entity EngDictChecker
+  entity FraDictChecker
+  DictChecker <|-- EngDictChecker
+  DictChecker <|-- FraDictChecker
+
+  interface LangManager{
+    + switchLang(string)
+  }
+  entity TheLangManager
+  TheLangManager --|> LangManager
+  LangManager - DictChecker
+}
+
+package token{
+  entity TheTokenizer
+  interface Token{
+    isWord()
+    getContext()
+  }
+  interface Tokenizer{
+    []Token lex(string)
+  }
+  Token - Tokenizer
+  TheTokenizer --|> Tokenizer
+
+  class TxtTokenizer
+  class XmlTokenizer
+  Tokenizer <|-- TxtTokenizer
+  Tokenizer <|-- XmlTokenizer
+
+  interface ContentTypeManager{
+    switchContentType(string)
+  }
+  entity TheContentTypeManager
+  TheContentTypeManager --|> ContentTypeManager
+
+  ContentTypeManager - TheTokenizer
+
+}
+package command{
+  interface Command{
+    + execute()
+  }
+  interface MutCommand{
+    + unexecute()
+  }
+  Command <|- MutCommand
+
+  interface Parser{
+    + Command parse(string)
+    + defindMacro(string, MutCommand)
+  }
+  entity TheParser
+  TheParser --|> Parser
+
+  interface Invoker{
+    + execute(Command)
+    + undo()
+    + redo()
+  }
+  entity TheInvoker
+  TheInvoker --|> Invoker
+
+  Invoker - Command
+  Parser - Command
+
+  class Show{
+    - content
+    - io.Writer
+  }
+  Command <|-- Show
+
+  class AppendFront{
+    - content
+    - arg
+  }
+  MutCommand <|-- AppendFront
+
+  class CheckSpelling{
+    - Checker
+    - Tokenizer
+    - content
+    - io.Writer
+  }
+  Command <|-- CheckSpelling
+}
+
+TheParser - TheTokenizer : autowire
+TheParser - TheContentTypeManager : autowire
+TheParser -- TheInvoker : autowire
+TheParser - TheChecker : autowire
+TheParser - TheLangManager : autowire
+@enduml
